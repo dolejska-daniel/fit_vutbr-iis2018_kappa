@@ -8,7 +8,7 @@ class AuthorizationException extends \Exception {}
 class InternalException extends \Exception {}
 
 //  Load dependencies & files
-require "./vendor/autoload.php" or die("ERROR: Composer's autoload file was not found!");
+require "./vendor/autoload.php";
 
 use Nette\Http\UrlScript;
 use Nette\Http\Request;
