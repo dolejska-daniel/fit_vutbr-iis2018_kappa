@@ -1,0 +1,25 @@
+{
+    "name": "dolejska-daniel/fit_vutbr-iis2018",
+    "description": "IIS Project (backend)",
+    "type": "project",
+    "require": {
+        "php": "^7.0",
+        "nette/database": "^2.4",
+        "nette/utils": "^2.5",
+        "nette/http": "^2.4",
+        "nette/neon": "^2.4",
+        "nette/security": "^2.4"
+    },
+    "authors": [
+        {
+            "name": "Daniel Dolejška",
+            "email": "xdolej08@stud.fit.vutbr.cz"
+        }
+    ],
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "": "src/"
+        }
+    }
+}

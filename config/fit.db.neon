@@ -1,0 +1,4 @@
+dsn: "mysql:host=localhost;dbname=xdolej08;port=/var/run/mysql/mysql.sock"
+user: xdolej08
+password: 6tujsake
+options:
