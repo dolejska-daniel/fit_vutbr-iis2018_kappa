@@ -3,6 +3,8 @@
 global $httpRequest, $httpResponse, $session;
 
 class BadRequestException extends \Exception {}
+class MissingParameterException extends \Exception {}
+class InvalidParameterException extends \Exception {}
 class AuthenticationException extends \Exception {}
 class AuthorizationException extends \Exception {}
 class InternalException extends \Exception {}
@@ -57,6 +59,18 @@ catch (AuthorizationException $ex)
 {
 	//  Internal not implemented exception
 	$err["error"] = "User is not allowed to access this resource.";
+	$err["description"] = $ex->getMessage();
+}
+catch (MissingParameterException $ex)
+{
+	//  Internal not implemented exception
+	$err["error"] = "Missing required parameter.";
+	$err["description"] = $ex->getMessage();
+}
+catch (InvalidParameterException $ex)
+{
+	//  Internal not implemented exception
+	$err["error"] = "Invalid parameter value.";
 	$err["description"] = $ex->getMessage();
 }
 catch (BadRequestException $ex)
