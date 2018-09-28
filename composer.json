@@ -19,9 +19,15 @@
     ],
     "minimum-stability": "stable",
     "autoload": {
+	    "classmap": [
+		    "src/GET",
+		    "src/POST",
+		    "src/PUT",
+		    "src/DELETE"
+	    ],
         "psr-4": {
             "": "src/",
-            "App\\": "src/"
+	        "App\\": "src/"
         }
     }
 }
