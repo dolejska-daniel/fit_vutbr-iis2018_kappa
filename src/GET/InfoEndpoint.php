@@ -2,7 +2,8 @@
 
 namespace GET;
 
-use StaticEndpoint;
+use App\Authorizator;
+use App\StaticEndpoint;
 
 
 class InfoEndpoint extends StaticEndpoint
@@ -16,4 +17,17 @@ class InfoEndpoint extends StaticEndpoint
 
 		return $data;
 	}
+
+	public static $resources = [
+		__CLASS__
+	];
+	public static function exportResources(): array { return self::$resources; }
+
+	public static $permissions = [
+		"allow" => [
+			Authorizator::ROLE_UNAUTHENTICATED,
+		],
+		"deny" => [],
+	];
+	public static function exportPermissions(): array { return self::$permissions; }
 }

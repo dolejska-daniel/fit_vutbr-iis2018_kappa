@@ -1,10 +1,17 @@
 <?php
 
-class Authenticator implements \Nette\Security\IAuthenticator
+namespace App;
+
+use AuthenticationException;
+use Nette\Database\Context;
+use Nette\Security\IAuthenticator;
+use Nette\Security\Identity;
+
+class Authenticator implements IAuthenticator
 {
 	private $db;
 
-	public function __construct( Nette\Database\Context $db )
+	public function __construct( Context $db )
 	{
 		$this->db = $db;
 	}
@@ -14,17 +21,26 @@ class Authenticator implements \Nette\Security\IAuthenticator
 	 * Performs an authentication against e.g. database.
 	 * and returns IIdentity on success or throws AuthenticationException
 	 *
+	 * @param array $credentials
+	 *
 	 * @return \Nette\Security\IIdentity
 	 *
-	 * @throws \Nette\Security\AuthenticationException
+	 * @throws AuthenticationException
 	 */
 	function authenticate(array $credentials)
 	{
 		list($username, $password) = $credentials;
 
-		//  TODO: Login user
-		throw new \Nette\NotImplementedException();
+		$query = $this->db->table("kis__kocky");
+		$query->where("login", $username);
+		$ucet = $query->fetch();
 
-		return null;
+		if ($ucet == false)
+			throw new AuthenticationException("User was not found.", self::IDENTITY_NOT_FOUND);
+
+		if (password_verify($password, $ucet->heslo) == false)
+			throw new AuthenticationException("Password is not valid.", self::INVALID_CREDENTIAL);
+
+		return new Identity($ucet->kocka_id, $ucet->role, $ucet->toArray());
 	}
 }
