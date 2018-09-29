@@ -33,6 +33,15 @@ class Service
 	const PARAM_DATETIME = "string/datetime";
 	const PARAM_FLOAT = "float";
 	const PARAM_RGB = "string/rgb";
+	const PARAM_ARRAY = "array";
+	const PARAM_ARRAY_INT_KEYS = "array/keys:ints";
+	const PARAM_ARRAY_STRING_KEYS = "array/keys:strings";
+	const PARAM_ARRAY_INT_VALUES = "array/values:ints";
+	const PARAM_ARRAY_STRING_VALUES = "array/values:strings";
+	const PARAM_ARRAY_INT_INT = "array/keys:ints/values:ints";
+	const PARAM_ARRAY_INT_STRING = "array/keys:ints/values:strings";
+	const PARAM_ARRAY_STRING_INT = "array/keys:strings/values:ints";
+	const PARAM_ARRAY_STRING_STRING = "array/keys:strings/values:strings";
 
 
 	/** @var Connection */
@@ -75,16 +84,22 @@ class Service
 	 * @throws AuthorizationException
 	 * @throws AuthenticationException
 	 */
-	public function processRequest( string $path ): void
+	public function processRequest( string $path = null ): void
 	{
 		/** @var $httpRequest \Nette\Http\Request */
 		global $httpRequest;
 
-		$path = preg_replace_callback("/(\/.)/", function( $x ) { return "\\" . strtoupper($x[1][1]); }, $path);
-		$path = preg_replace_callback("/(\-.)/", function( $x ) { return strtoupper($x[1][1]); }, $path);
-		$path = substr($path, 1);
+		if ($path[0] === "/" && strlen($path) > 1)
+		{
+			$path = preg_replace_callback("/(\/.)/", function( $x ) { return "\\" . strtoupper($x[1][1]); }, $path);
+			$path = preg_replace_callback("/(\-.)/", function( $x ) { return strtoupper($x[1][1]); }, $path);
+			$path = substr($path, 1);
+		}
+		else
+		{
+			$path = "Info";
+		}
 		$method = $httpRequest->getMethod();
-
 		$className = "\\$method\\{$path}Endpoint";
 
 		if (class_exists($className) == false)
@@ -112,58 +127,59 @@ class Service
 
 	/**
 	 * @param $datatype
-	 * @param $value
+	 * @param $variable
+	 * @param $name
 	 *
 	 * @return mixed
 	 *
 	 * @throws InvalidParameterException
 	 */
-	protected function processParam( $datatype, $value, $name )
+	protected function processParam($datatype, $variable, $name )
 	{
 		if ($datatype === self::PARAM_INT)
 		{
-			if (is_numeric($value) == false)
+			if (is_numeric($variable) == false)
 				throw new InvalidParameterException("Parameter '$name' is not valid integer.");
 
-			if ($value != (int)$value)
+			if ($variable != (int)$variable)
 				throw new InvalidParameterException("Parameter '$name' is not valid integer representation.");
 
-			return (int)$value;
+			return (int)$variable;
 		}
 		elseif ($datatype === self::PARAM_INT_POS)
 		{
-			$value = $this->processParam(self::PARAM_INT, $value, $name);
+			$variable = $this->processParam(self::PARAM_INT, $variable, $name);
 
-			if ($value < 0)
+			if ($variable < 0)
 				throw new InvalidParameterException("Parameter '$name' is not valid positive integer.");
 
-			return $value;
+			return $variable;
 		}
 		elseif ($datatype === self::PARAM_INT_POS_NONZERO)
 		{
-			$value = $this->processParam(self::PARAM_INT_POS, $value, $name);
+			$variable = $this->processParam(self::PARAM_INT_POS, $variable, $name);
 
-			if ($value <= 0)
+			if ($variable <= 0)
 				throw new InvalidParameterException("Parameter '$name' is not valid positive nonzero integer.");
 
-			return $value;
+			return $variable;
 		}
 		elseif ($datatype === self::PARAM_FLOAT)
 		{
-			if (is_numeric($value) == false)
+			if (is_numeric($variable) == false)
 				throw new InvalidParameterException("Parameter '$name' is not valid float.");
 
-			if ($value != (float)$value)
+			if ($variable != (float)$variable)
 				throw new InvalidParameterException("Parameter '$name' is not valid float representation.");
 
-			return (float)$value;
+			return (float)$variable;
 		}
 		elseif ($datatype === self::PARAM_DATETIME)
 		{
 			try
 			{
-				$value = DateTime::createFromFormat("Y-m-d H:i:s", $value);
-				return $value;
+				$variable = DateTime::createFromFormat("Y-m-d H:i:s", $variable);
+				return $variable;
 			}
 			catch (\Exception $ex)
 			{
@@ -172,14 +188,99 @@ class Service
 		}
 		elseif ($datatype === self::PARAM_RGB)
 		{
-			if (preg_match("^(0|[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])?(,(0|[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])?){2}$", $value) == false)
+			if (preg_match("^(0|[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])?(,(0|[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])?){2}$", $variable) == false)
 				throw new InvalidParameterException("Parameter '$name' is not valid RGB representation.");
 
-			return $value;
+			return $variable;
+		}
+		elseif ($datatype === self::PARAM_ARRAY)
+		{
+			if (is_array($variable) == false)
+				throw new InvalidParameterException("Parameter '$name' is not valid array.");
+
+			return $variable;
+		}
+		elseif ($datatype === self::PARAM_ARRAY_INT_KEYS)
+		{
+			$variable = $this->processParam(self::PARAM_ARRAY, $variable, $name);
+
+			array_walk($variable, function ($value, $index, $name) {
+				if (is_integer($index) == false)
+					throw new InvalidParameterException("Key '$index' in array '$name' is not integer.");
+			}, $name);
+
+			return $variable;
+		}
+		elseif ($datatype === self::PARAM_ARRAY_STRING_KEYS)
+		{
+			$variable = $this->processParam(self::PARAM_ARRAY, $variable, $name);
+
+			array_walk($variable, function ($value, $index, $name) {
+				if (is_integer($index) == false)
+					throw new InvalidParameterException("Key '$index' in array '$name' is not string.");
+			}, $name);
+
+			return $variable;
+		}
+		elseif ($datatype === self::PARAM_ARRAY_INT_VALUES)
+		{
+			$variable = $this->processParam(self::PARAM_ARRAY, $variable, $name);
+
+			array_walk($variable, function (&$value, $index, $data) {
+				try
+				{
+					$value = $this->getParam($data["var"], $index, self::PARAM_INT);
+				}
+				catch (InvalidParameterException $ex)
+				{
+					throw new InvalidParameterException("Value for '$index' key in array '$data[name]' is not integer.");
+				}
+			}, [ "var" => $variable, "name" => $name]);
+
+			return $variable;
+		}
+		elseif ($datatype === self::PARAM_ARRAY_STRING_VALUES)
+		{
+			$variable = $this->processParam(self::PARAM_ARRAY, $variable, $name);
+
+			array_walk($variable, function ($value, $index, $name) {
+				if (is_string($value) == false)
+					throw new InvalidParameterException("Value for '$index' key in array '$name' is not string.");
+			}, $name);
+
+			return $variable;
+		}
+		elseif ($datatype === self::PARAM_ARRAY_INT_INT)
+		{
+			$variable = $this->processParam(self::PARAM_ARRAY_INT_KEYS, $variable, $name);
+			$variable = $this->processParam(self::PARAM_ARRAY_INT_VALUES, $variable, $name);
+
+			return $variable;
+		}
+		elseif ($datatype === self::PARAM_ARRAY_INT_STRING)
+		{
+			$variable = $this->processParam(self::PARAM_ARRAY_INT_KEYS, $variable, $name);
+			$variable = $this->processParam(self::PARAM_ARRAY_STRING_VALUES, $variable, $name);
+
+			return $variable;
+		}
+		elseif ($datatype === self::PARAM_ARRAY_STRING_INT)
+		{
+			$variable = $this->processParam(self::PARAM_ARRAY_STRING_KEYS, $variable, $name);
+			$variable = $this->processParam(self::PARAM_ARRAY_INT_VALUES, $variable, $name);
+
+			return $variable;
+		}
+		elseif ($datatype === self::PARAM_ARRAY_STRING_STRING)
+		{
+			$variable = $this->processParam(self::PARAM_ARRAY_STRING_KEYS, $variable, $name);
+			$variable = $this->processParam(self::PARAM_ARRAY_STRING_VALUES, $variable, $name);
+
+			return $variable;
 		}
 		elseif ($datatype === self::PARAM_STRING)
 		{
-			return $value;
+			return $variable;
 		}
 		else
 		{

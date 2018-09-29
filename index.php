@@ -44,7 +44,7 @@ try
 {
 	//  Start application
 	$app = Service::init(APP_TARGET);
-	$app->processRequest(@array_keys($_GET)[0] ?: "/info");
+	$app->processRequest(@array_keys($_GET)[0]);
 
 	//  Send data
 	echo Json::encode($app->getData(), $httpRequest->isAjax() === false ? 0 : Json::PRETTY);
