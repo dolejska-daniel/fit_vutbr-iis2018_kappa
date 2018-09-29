@@ -1,6 +1,7 @@
 <?php
 
 use App\Service;
+use Nette\InvalidArgumentException;
 
 
 /**
@@ -65,25 +66,22 @@ class FetchExtension
 
 
 	/**
-	 * @param string $condition
-	 * @param string $value
-	 */
-	public function addCondition( string $condition, string $value )
-	{
-		$this->query->where($condition, $value);
-	}
-
-	/**
+	 * @param string $select
 	 * @param string $conditions
-	 * @param string $fetchSingle
+	 * @param string $fetchFormat
 	 *
 	 * @return mixed
 	 *
 	 * @throws AuthorizationException
 	 * @throws InvalidParameterException
 	 */
-	public function fetchData( string $conditions = 'cond', string $fetchSingle = 'fetchSingle' )
+	public function fetchData( string $select = 'select', string $conditions = 'cond', string $fetchFormat = 'fetchFormat' )
 	{
+		$s = $this->app->getQueryParam($select, $this->app::PARAM_STRING, "*", false);
+		if (preg_match("/^((?:[A-z\_]+\.)*(?:[A-z\_]+|\*)+(?:,\s?)?)+$/", $s, $matches) == false)
+			throw new InvalidParameterException("Value for parameter '$select' is not valid.");
+		$this->query->select($s);
+
 		$conds = $this->app->getQueryParam($conditions, $this->app::PARAM_ARRAY_STRING_STRING, [], false);
 		foreach ($conds as $condition => $value)
 		{
@@ -111,10 +109,31 @@ class FetchExtension
 			$this->query->where($condition, $value);
 		}
 
-		$fetchSingle = $this->app->getQueryParam($fetchSingle, $this->app::PARAM_BOOL, false, false);
-		if ($fetchSingle)
+		$format = $this->app->getQueryParam($fetchFormat, $this->app::PARAM_STRING, "[]", false);
+		if ($format === "single")
 			return $this->query->fetch()->toArray();
+		else
+		{
+			try
+			{
+				return $this->query->fetchAssoc($format);
+			}
+			catch (InvalidArgumentException $ex)
+			{
+				if (strpos($ex->getMessage(), "Invalid path") === false)
+					throw new InvalidParameterException("Probably invalid value for '$select' parameter. But who knows really. " . $ex->getMessage());
 
-		return $this->query->fetchAssoc("[]");
+				throw new InvalidParameterException("Value for parameter '$fetchFormat' is not valid format type or associative path.");
+			}
+		}
+	}
+
+	/**
+	 * @param string $condition
+	 * @param string $value
+	 */
+	public function addCondition( string $condition, string $value )
+	{
+		$this->query->where($condition, $value);
 	}
 }

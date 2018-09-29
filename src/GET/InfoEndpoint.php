@@ -20,7 +20,7 @@ class InfoEndpoint extends StaticEndpoint
 
 	public static $permissions = [
 		"allow" => [
-			Authorizator::ROLE_UNAUTHENTICATED,
+			Authorizator::ROLE_UNAUTHENTICATED => Authorizator::ALL,
 		],
 		"deny" => [],
 	];
