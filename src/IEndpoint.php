@@ -9,6 +9,5 @@ interface IEndpoint
 
 	public static function processRequest(): array;
 
-	public static function exportResources(): array;
 	public static function exportPermissions(): array;
 }

@@ -11,6 +11,9 @@ use MissingParameterException;
 use Nette\Caching\Storages\FileStorage;
 use Nette\Database\Connection;
 use Nette\Database\Context;
+use Nette\Database\Conventions\DiscoveredConventions;
+use Nette\Database\DriverException;
+use Nette\Database\ResultSet;
 use Nette\Database\Structure;
 use Nette\Http\UserStorage;
 use Nette\Neon\Neon;
@@ -51,12 +54,19 @@ class Service
 	/** @var Context */
 	public $context;
 
+	/** @var Structure */
+	public $structure;
+
+	/** @var FileStorage */
 	public $storage;
 
+	/** @var User */
 	public $user;
 
+	/** @var Authenticator */
 	public $authenticator;
 
+	/** @var Authorizator */
 	public $authorizator;
 
 
@@ -118,7 +128,7 @@ class Service
 			if ($this->user->isAllowed($ref->name) == false)
 				throw new AuthorizationException("User not allowed to use '$ref->name'.");
 
-			$this->data = $ref->getMethod("processRequest")->invoke(null);
+			$this->data += $ref->getMethod("processRequest")->invoke(null);
 		}
 		catch (ReflectionException $ex)
 		{
@@ -129,12 +139,16 @@ class Service
 	/**
 	 * @param $condition
 	 *
+	 * @return array
+	 *
 	 * @throws InvalidParameterException
 	 */
-	public function validateDatabaseCondition($condition)
+	public function validateDatabaseCondition( $condition)
 	{
-		if (preg_match("^([a-z\_]+)([><]=?|=)[?]?$", $condition) == false)
+		if (preg_match("/^(?:([A-z\_]+)\.){0,}([A-z\_]+)([><]=?[?]?|=[?]?|)$/", $condition, $matches) == false)
 			throw new \InvalidParameterException("Provided condition '$condition' cannot be accepted!");
+
+		return $matches;
 	}
 
 	/**
@@ -146,7 +160,7 @@ class Service
 	 *
 	 * @throws InvalidParameterException
 	 */
-	protected function processParam($datatype, $variable, $name )
+	protected function processParam( $datatype, $variable, $name )
 	{
 		if ($datatype === self::PARAM_INT)
 		{
@@ -325,7 +339,7 @@ class Service
 	 * @throws MissingParameterException
 	 * @throws InvalidParameterException
 	 */
-	protected function getParam(array $source, string $name, string $datatype, $default = null, bool $required = true )
+	protected function getParam( array $source, string $name, string $datatype, $default = null, bool $required = true )
 	{
 		$param = $default;
 		if (isset($source[$name]))
@@ -366,8 +380,27 @@ class Service
 		$this->conn = $c = new Connection(...$db_config);
 
 		$this->storage = $s = new FileStorage(CACHE_DIR);
-		$structure = new Structure($c, $s);
-		$this->context = $db = new Context($c, $structure);
+		$this->structure = $struct = new Structure($c, $s);
+		$this->context = $db = new Context($c, $struct, new DiscoveredConventions($struct), $s);
+
+		$c->onQuery[] = function (Connection $connection, $result) {
+			if ($this->getQueryParam("debug", self::PARAM_BOOL, false, false))
+			{
+				$data = [
+					'query' => $result->getQueryString(),
+				];
+
+				if ($result instanceof ResultSet);
+				elseif ($result instanceof DriverException)
+				{
+					echo "<pre>";
+					print_r($result);
+					die();
+				}
+
+				$this->data['debug']["queries"][] = $data;
+			}
+		};
 
 		$this->authenticator = new Authenticator($db);
 		$this->authorizator = new Authorizator();

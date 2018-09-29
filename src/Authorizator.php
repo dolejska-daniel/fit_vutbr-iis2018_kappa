@@ -4,6 +4,7 @@ namespace App;
 
 use Nette\Security\IAuthorizator;
 use Nette\Security\Permission;
+use ReflectionClass;
 
 
 class Authorizator implements IAuthorizator
@@ -23,6 +24,13 @@ class Authorizator implements IAuthorizator
 	/** @var Permission */
 	private $p;
 
+	/** @var array */
+	private $tableResources = [];
+
+
+	/**
+	 * Authorizator constructor.
+	 */
 	public function __construct()
 	{
 		$this->p = $p = new Permission();
@@ -34,20 +42,39 @@ class Authorizator implements IAuthorizator
 	/**
 	 * Imports all required endpoint resources and permissions.
 	 *
-	 * @param \ReflectionClass $endpoint
+	 * @param ReflectionClass $endpoint
 	 */
-	function importEndpoint(\ReflectionClass $endpoint)
+	function importEndpoint( ReflectionClass $endpoint )
 	{
-		$res = $endpoint->getMethod("exportResources")->invoke(null);
-		foreach ($res as $resource)
+		foreach ($endpoint->getMethod("exportPermissions")->invoke(null) as $resource => $data)
+		{
 			if ($this->p->hasResource($resource) == false)
 				$this->p->addResource($resource);
 
-		foreach ($endpoint->getMethod("exportPermissions")->invoke(null)["allow"] as $resource => $role)
-			$this->p->allow($role, is_numeric($resource) ? $res : $resource);
+			foreach ($data["allow"] as $role => $privilege)
+				$this->p->allow($role, $resource, $privilege);
 
-		foreach ($endpoint->getMethod("exportPermissions")->invoke(null)["deny"] as $resource => $role)
-			$this->p->deny($role, is_numeric($resource) ? $res : $resource);
+			foreach ($data["deny"] as $role => $privilege)
+				$this->p->deny($role, $resource, $privilege);
+		}
+	}
+
+	/**
+	 * @param ReflectionClass $endpoint
+	 * @param string $table
+	 */
+	function addEndpointTable( ReflectionClass $endpoint, string $table )
+	{
+		$this->tableResources[$table][explode("\\", $endpoint->getNamespaceName())[0]] = $endpoint->name;
+	}
+
+	/**
+	 * @param string $table
+	 * @return array
+	 */
+	function getResourceByTable( string $table ): array
+	{
+		return @$this->tableResources[$table] ?: [];
 	}
 
 	/**

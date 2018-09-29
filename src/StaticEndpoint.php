@@ -22,4 +22,7 @@ abstract class StaticEndpoint implements IEndpoint
 		self::$db = $app->context;
 		return self::class;
 	}
+
+	/** @var array */
+	public static $related_permissions = [];
 }

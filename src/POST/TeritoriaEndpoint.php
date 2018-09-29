@@ -13,16 +13,11 @@ class TeritoriaEndpoint extends StaticEndpoint
 		return [];
 	}
 
-	public static $resources = [
-		__CLASS__
-	];
-	public static function exportResources(): array { return self::$resources; }
-
 	public static $permissions = [
 		"allow" => [
-			Authorizator::ROLE_USER,
+			Authorizator::ROLE_USER => Authorizator::ALL,
 		],
 		"deny" => [],
 	];
-	public static function exportPermissions(): array { return self::$permissions; }
+	public static function exportPermissions(): array { return [ __CLASS__ => self::$permissions ] + self::$related_permissions; }
 }
