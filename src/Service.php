@@ -30,6 +30,7 @@ class Service
 	const PARAM_INT_POS = "integer/positive";
 	const PARAM_INT_POS_NONZERO = "integer/positive#nonzero";
 	const PARAM_STRING = "string";
+	const PARAM_BOOL = "bool";
 	const PARAM_DATETIME = "string/datetime";
 	const PARAM_FLOAT = "float";
 	const PARAM_RGB = "string/rgb";
@@ -126,6 +127,17 @@ class Service
 	}
 
 	/**
+	 * @param $condition
+	 *
+	 * @throws InvalidParameterException
+	 */
+	public function validateDatabaseCondition($condition)
+	{
+		if (preg_match("^([a-z\_]+)([><]=?|=)[?]?$", $condition) == false)
+			throw new \InvalidParameterException("Provided condition '$condition' cannot be accepted!");
+	}
+
+	/**
 	 * @param $datatype
 	 * @param $variable
 	 * @param $name
@@ -174,6 +186,19 @@ class Service
 
 			return (float)$variable;
 		}
+		elseif ($datatype === self::PARAM_BOOL)
+		{
+			if ($variable === "true")
+				$variable = true;
+
+			if ($variable === "false")
+				$variable = false;
+
+			if ($variable !== "1" && $variable !== "0" && is_bool($variable) == false)
+				throw new InvalidParameterException("Parameter '$name' is not valid boolean representation.");
+
+			return boolval($variable);
+		}
 		elseif ($datatype === self::PARAM_DATETIME)
 		{
 			try
@@ -216,7 +241,7 @@ class Service
 			$variable = $this->processParam(self::PARAM_ARRAY, $variable, $name);
 
 			array_walk($variable, function ($value, $index, $name) {
-				if (is_integer($index) == false)
+				if (is_string($index) == false)
 					throw new InvalidParameterException("Key '$index' in array '$name' is not string.");
 			}, $name);
 
